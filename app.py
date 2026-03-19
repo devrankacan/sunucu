@@ -162,21 +162,28 @@ def run(cmd):
     except Exception:
         return ""
 
+def fmt_bytes(b):
+    for u in ['B','KB','MB','GB','TB']:
+        if b < 1024: return f"{b:.1f} {u}"
+        b /= 1024
+
 def get_disks():
     disks = []
-    for part in shutil.disk_partitions():
+    seen = set()
+    for part in shutil.disk_partitions(all=False):
+        if part.mountpoint in seen:
+            continue
+        seen.add(part.mountpoint)
         try:
             usage = shutil.disk_usage(part.mountpoint)
+            if usage.total == 0:
+                continue
             pct = int(usage.used / usage.total * 100)
-            def fmt(b):
-                for u in ['B','KB','MB','GB','TB']:
-                    if b < 1024: return f"{b:.1f} {u}"
-                    b /= 1024
             disks.append({
                 "mount": part.mountpoint,
-                "total": fmt(usage.total),
-                "used":  fmt(usage.used),
-                "free":  fmt(usage.free),
+                "total": fmt_bytes(usage.total),
+                "used":  fmt_bytes(usage.used),
+                "free":  fmt_bytes(usage.free),
                 "pct":   pct
             })
         except Exception:
@@ -279,23 +286,27 @@ def index():
     if not session.get("auth"):
         return render_template_string(HTML, logged_in=False, error=None)
 
-    disks = get_disks()
-    mem_raw = run("free")
-    mem_lines = mem_raw.splitlines()
+    try:
+        disks = get_disks()
+    except Exception:
+        disks = []
     mem_dict = {}
     mem_pct = 0
-    if len(mem_lines) > 1:
-        parts = mem_lines[1].split()
-        labels = ["Toplam","Kullanılan","Boş","Paylaşılan","Önbellek","Kullanılabilir"]
-        out_h = run("free -h").splitlines()
-        h_parts = out_h[1].split() if len(out_h) > 1 else parts
-        for i, label in enumerate(labels):
-            if i + 1 < len(h_parts):
-                mem_dict[label] = h_parts[i + 1]
-        try:
+    try:
+        mem_raw = run("free")
+        out_h = run("free -h")
+        raw_lines = mem_raw.splitlines()
+        h_lines = out_h.splitlines()
+        if len(raw_lines) > 1 and len(h_lines) > 1:
+            parts = raw_lines[1].split()
+            h_parts = h_lines[1].split()
+            labels = ["Toplam","Kullanılan","Boş","Paylaşılan","Önbellek","Kullanılabilir"]
+            for i, label in enumerate(labels):
+                if i + 1 < len(h_parts):
+                    mem_dict[label] = h_parts[i + 1]
             mem_pct = int(int(parts[2]) / int(parts[1]) * 100)
-        except Exception:
-            mem_pct = 0
+    except Exception:
+        mem_pct = 0
 
     return render_template_string(HTML,
         logged_in=True,
