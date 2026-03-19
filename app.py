@@ -105,9 +105,16 @@ HTML = """
     </div>
   </div>
 
-  <!-- CPU & Sistem -->
+  <!-- CPU Kullanımı -->
   <div class="card">
-    <h2>🖥️ Sistem</h2>
+    <h2>⚡ CPU Kullanımı</h2>
+    <div style="text-align:center; font-size:42px; font-weight:bold; color:{% if cpu_pct > 85 %}#f85149{% elif cpu_pct > 70 %}#e3b341{% else %}#3fb950{% endif %}; padding: 12px 0;">
+      %{{ cpu_pct }}
+    </div>
+    <div class="progress-bar" style="margin-bottom:16px">
+      <div class="progress-fill {% if cpu_pct > 85 %}danger{% elif cpu_pct > 70 %}warn{% endif %}"
+           style="width: {{ cpu_pct }}%"></div>
+    </div>
     {% for k, v in system.items() %}
     <div class="stat">
       <span class="stat-label">{{ k }}</span>
@@ -162,33 +169,44 @@ def run(cmd):
     except Exception:
         return ""
 
-def fmt_bytes(b):
-    for u in ['B','KB','MB','GB','TB']:
-        if b < 1024: return f"{b:.1f} {u}"
-        b /= 1024
-
 def get_disks():
     disks = []
-    seen = set()
-    for part in shutil.disk_partitions(all=False):
-        if part.mountpoint in seen:
+    out = run("df -h --output=target,size,used,avail,pcent -x tmpfs -x devtmpfs -x squashfs 2>/dev/null")
+    for line in out.splitlines()[1:]:
+        parts = line.split()
+        if len(parts) < 5:
             continue
-        seen.add(part.mountpoint)
         try:
-            usage = shutil.disk_usage(part.mountpoint)
-            if usage.total == 0:
-                continue
-            pct = int(usage.used / usage.total * 100)
-            disks.append({
-                "mount": part.mountpoint,
-                "total": fmt_bytes(usage.total),
-                "used":  fmt_bytes(usage.used),
-                "free":  fmt_bytes(usage.free),
-                "pct":   pct
-            })
+            pct = int(parts[4].replace('%', ''))
         except Exception:
-            pass
+            pct = 0
+        disks.append({
+            "mount": parts[0],
+            "total": parts[1],
+            "used":  parts[2],
+            "free":  parts[3],
+            "pct":   pct
+        })
     return disks
+
+def get_cpu_usage():
+    try:
+        with open("/proc/stat") as f:
+            line = f.readline()
+        vals = list(map(int, line.split()[1:]))
+        idle1, total1 = vals[3], sum(vals)
+        import time; time.sleep(0.5)
+        with open("/proc/stat") as f:
+            line = f.readline()
+        vals = list(map(int, line.split()[1:]))
+        idle2, total2 = vals[3], sum(vals)
+        diff_total = total2 - total1
+        diff_idle  = idle2 - idle1
+        if diff_total == 0:
+            return 0
+        return int((diff_total - diff_idle) / diff_total * 100)
+    except Exception:
+        return 0
 
 def get_memory():
     out = run("free -h")
@@ -313,6 +331,7 @@ def index():
         disks=disks,
         memory=mem_dict,
         mem_pct=mem_pct,
+        cpu_pct=get_cpu_usage(),
         system=get_system(),
         sites=get_sites(),
         services=get_services(),
