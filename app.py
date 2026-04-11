@@ -287,12 +287,19 @@ def get_ports():
         out = run("netstat -tlnp 2>/dev/null | grep LISTEN | awk '{print $4, $7}' | sort")
     return out or "Bilgi alınamadı"
 
-@app.route("/login", methods=["POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
+    if request.method == "GET":
+        return redirect("/")
     if request.form.get("password") == PASSWORD:
         session["auth"] = True
         return redirect("/")
     return render_template_string(HTML, logged_in=False, error="Hatalı şifre!")
+
+
+@app.errorhandler(404)
+def not_found(e):
+    return redirect("/")
 
 @app.route("/logout")
 def logout():
