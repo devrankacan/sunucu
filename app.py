@@ -130,7 +130,6 @@ HTML = """
       {% for site in sites %}
       <div class="stat">
         <span class="stat-label">{{ site.name }}</span>
-        <span class="stat-value">{{ site.size }}</span>
       </div>
       {% endfor %}
     {% else %}
@@ -264,8 +263,7 @@ def get_sites():
                 full = os.path.join(base, name)
                 if os.path.isdir(full) and full not in seen:
                     seen.add(full)
-                    size = run(f"du -sh '{full}' 2>/dev/null | cut -f1")
-                    sites.append({"name": f"{base}/{name}", "size": size or "?"})
+                    sites.append({"name": f"{base}/{name}"})
         except Exception:
             pass
     return sites
@@ -274,10 +272,11 @@ def get_services():
     names = ["nginx", "apache2", "mysql", "mariadb", "postgresql", "php-fpm",
              "php8.4-fpm", "php8.3-fpm", "redis", "memcached", "ssh", "docker",
              "fail2ban", "ufw"]
+    out = run(f"systemctl is-active {' '.join(names)} 2>/dev/null")
+    statuses = out.splitlines()
     services = []
-    for name in names:
-        status = run(f"systemctl is-active {name} 2>/dev/null")
-        if status:  # sadece sistemde olan servisleri göster
+    for name, status in zip(names, statuses):
+        if status and status != "unknown":
             services.append({"name": name, "active": status == "active"})
     return services
 
