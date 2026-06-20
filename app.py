@@ -1,4 +1,5 @@
 import os
+import re
 import subprocess
 import shutil
 from flask import Flask, render_template_string, request, session, redirect, url_for
@@ -129,7 +130,8 @@ HTML = """
     {% if sites %}
       {% for site in sites %}
       <div class="stat">
-        <span class="stat-label">{{ site.name }}</span>
+        <span class="stat-label">{{ site.name }}{% if site.port != '-' %} <span style="color:#58a6ff">:{{ site.port }}</span>{% endif %}</span>
+        <span class="stat-value">{{ site.size }}</span>
       </div>
       {% endfor %}
     {% else %}
@@ -251,9 +253,33 @@ def get_system():
         "Çalışma Süresi": uptime,
     }
 
+def get_nginx_site_ports():
+    conf_dir = "/etc/nginx/sites-enabled"
+    ports = {}
+    if not os.path.isdir(conf_dir):
+        return ports
+    for fname in os.listdir(conf_dir):
+        try:
+            with open(os.path.join(conf_dir, fname)) as f:
+                content = f.read()
+        except Exception:
+            continue
+        for block in re.findall(r"server\s*\{(?:[^{}]|\{[^{}]*\})*\}", content):
+            root_match = re.search(r"root\s+([^;]+);", block)
+            if not root_match:
+                continue
+            root_path = root_match.group(1).strip().rstrip("/")
+            proxy_match = re.search(r"proxy_pass\s+https?://[^:/]+:(\d+)", block)
+            listen_match = re.search(r"listen\s+(\d+)", block)
+            if proxy_match:
+                ports[root_path] = proxy_match.group(1)
+            elif listen_match:
+                ports[root_path] = listen_match.group(1)
+    return ports
+
 def get_sites():
     dirs = ["/var/www", "/home", "/srv/www", "/srv"]
-    sites = []
+    paths = []
     seen = set()
     for base in dirs:
         if not os.path.isdir(base):
@@ -263,9 +289,28 @@ def get_sites():
                 full = os.path.join(base, name)
                 if os.path.isdir(full) and full not in seen:
                     seen.add(full)
-                    sites.append({"name": f"{base}/{name}"})
+                    paths.append(full)
         except Exception:
             pass
+
+    sizes = {}
+    if paths:
+        quoted = " ".join(f"'{p}'" for p in paths)
+        out = run(f"timeout 15 du -sh {quoted} 2>/dev/null")
+        for line in out.splitlines():
+            parts = line.split("\t")
+            if len(parts) == 2:
+                sizes[parts[1]] = parts[0]
+
+    ports = get_nginx_site_ports()
+
+    sites = []
+    for full in paths:
+        sites.append({
+            "name": full,
+            "size": sizes.get(full, "?"),
+            "port": ports.get(full, "-"),
+        })
     return sites
 
 def get_services():
