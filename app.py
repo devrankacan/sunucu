@@ -169,7 +169,8 @@ HTML = """
 
 def run(cmd):
     try:
-        return subprocess.check_output(cmd, shell=True, stderr=subprocess.DEVNULL, text=True).strip()
+        result = subprocess.run(cmd, shell=True, capture_output=True, text=True)
+        return result.stdout.strip()
     except Exception:
         return ""
 
@@ -304,7 +305,9 @@ def get_nginx_proxy_keywords():
         keywords = {_norm(fname)}
         for sn_line in re.findall(r"server_name\s+([^;]+);", content):
             for token in sn_line.split():
-                token = token.strip().lstrip("www.")
+                token = token.strip()
+            if token.startswith("www."):
+                token = token[4:]
                 if token and token != "_":
                     keywords.add(_norm(token.split(".")[0]))
         entries.append((keywords, port))
