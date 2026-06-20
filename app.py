@@ -306,8 +306,8 @@ def get_nginx_proxy_keywords():
         for sn_line in re.findall(r"server_name\s+([^;]+);", content):
             for token in sn_line.split():
                 token = token.strip()
-            if token.startswith("www."):
-                token = token[4:]
+                if token.startswith("www."):
+                    token = token[4:]
                 if token and token != "_":
                     keywords.add(_norm(token.split(".")[0]))
         entries.append((keywords, port))
