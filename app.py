@@ -19,13 +19,16 @@ HTML = """
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { font-family: monospace; background: #0d1117; color: #c9d1d9; min-height: 100vh; }
+  .icon { width: 16px; height: 16px; stroke: currentColor; fill: none; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: -3px; }
   .header { background: #161b22; padding: 16px 24px; border-bottom: 1px solid #30363d; display: flex; justify-content: space-between; align-items: center; }
-  .header h1 { font-size: 18px; color: #58a6ff; }
-  .logout { color: #f85149; text-decoration: none; font-size: 13px; }
+  .header h1 { font-size: 18px; color: #58a6ff; display: flex; align-items: center; gap: 10px; }
+  .header h1 .icon { width: 20px; height: 20px; }
+  .logout { color: #f85149; text-decoration: none; font-size: 13px; display: inline-flex; align-items: center; gap: 6px; }
   .logout:hover { text-decoration: underline; }
   .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; padding: 24px; }
   .card { background: #161b22; border: 1px solid #30363d; border-radius: 8px; padding: 20px; }
-  .card h2 { font-size: 13px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; }
+  .card h2 { font-size: 13px; color: #8b949e; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 16px; display: flex; align-items: center; gap: 8px; }
+  .card h2 .icon { color: #58a6ff; }
   .stat { display: flex; justify-content: space-between; align-items: center; padding: 8px 0; border-bottom: 1px solid #21262d; }
   .stat:last-child { border-bottom: none; }
   .stat-label { color: #8b949e; font-size: 13px; }
@@ -55,7 +58,7 @@ HTML = """
 {% if not logged_in %}
 <div class="login-wrap">
   <div class="login-box">
-    <h1>🔐 Admin Panel</h1>
+    <h1><svg class="icon" style="width:24px;height:24px" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Admin Panel</h1>
     {% if error %}<p class="error">{{ error }}</p>{% endif %}
     <form method="post" action="/login">
       <input type="password" name="password" placeholder="Şifre" autofocus>
@@ -65,14 +68,14 @@ HTML = """
 </div>
 {% else %}
 <div class="header">
-  <h1>⚡ Sunucu Admin Paneli</h1>
-  <a class="logout" href="/logout">Çıkış Yap</a>
+  <h1><svg class="icon" viewBox="0 0 24 24"><rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/></svg> Sunucu Admin Paneli</h1>
+  <a class="logout" href="/logout"><svg class="icon" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg> Çıkış Yap</a>
 </div>
 <div class="grid">
 
   <!-- Disk Kullanımı -->
   <div class="card">
-    <h2>💾 Disk Kullanımı</h2>
+    <h2><svg class="icon" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M21 12c0 1.7-4 3-9 3s-9-1.3-9-3M3 5v14c0 1.7 4 3 9 3s9-1.3 9-3V5"/></svg> Disk Kullanımı</h2>
     {% for disk in disks %}
     <div class="stat">
       <span class="stat-label">{{ disk.mount }}</span>
@@ -90,7 +93,7 @@ HTML = """
 
   <!-- Bellek -->
   <div class="card">
-    <h2>🧠 Bellek (RAM)</h2>
+    <h2><svg class="icon" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M1 9h3M1 15h3M20 9h3M20 15h3"/></svg> Bellek (RAM)</h2>
     {% for k, v in memory.items() %}
     <div class="stat">
       <span class="stat-label">{{ k }}</span>
@@ -108,7 +111,7 @@ HTML = """
 
   <!-- CPU Kullanımı -->
   <div class="card">
-    <h2>⚡ CPU Kullanımı</h2>
+    <h2><svg class="icon" viewBox="0 0 24 24"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg> CPU Kullanımı</h2>
     <div style="text-align:center; font-size:42px; font-weight:bold; color:{% if cpu_pct > 85 %}#f85149{% elif cpu_pct > 70 %}#e3b341{% else %}#3fb950{% endif %}; padding: 12px 0;">
       %{{ cpu_pct }}
     </div>
@@ -126,7 +129,7 @@ HTML = """
 
   <!-- Siteler -->
   <div class="card">
-    <h2>🌐 Siteler / Dizinler</h2>
+    <h2><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg> Siteler / Dizinler</h2>
     {% if sites %}
       {% for site in sites %}
       <div class="stat">
@@ -141,7 +144,7 @@ HTML = """
 
   <!-- Çalışan Servisler -->
   <div class="card">
-    <h2>⚙️ Servisler</h2>
+    <h2><svg class="icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Servisler</h2>
     {% for svc in services %}
     <div class="stat">
       <span class="stat-label">{{ svc.name }}</span>
@@ -154,7 +157,7 @@ HTML = """
 
   <!-- Açık Portlar -->
   <div class="card">
-    <h2>🔌 Dinlenen Portlar</h2>
+    <h2><svg class="icon" viewBox="0 0 24 24"><path d="M9 2v6M15 2v6M6 8h12l-1 5a5 5 0 0 1-10 0z"/><path d="M12 17v5"/></svg> Dinlenen Portlar</h2>
     <pre>{{ ports }}</pre>
   </div>
 
