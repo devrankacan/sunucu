@@ -277,6 +277,46 @@ def get_nginx_site_ports():
                 ports[root_path] = listen_match.group(1)
     return ports
 
+def _norm(s):
+    return re.sub(r"[^a-z0-9]", "", s.lower())
+
+def get_nginx_proxy_keywords():
+    """root direktifi olmayan, sadece proxy_pass kullanan configler için
+    dosya adı ve server_name'den anahtar kelime çıkarır (bulanık eşleştirme için)."""
+    conf_dir = "/etc/nginx/sites-enabled"
+    entries = []
+    if not os.path.isdir(conf_dir):
+        return entries
+    for fname in os.listdir(conf_dir):
+        path = os.path.join(conf_dir, fname)
+        try:
+            with open(path) as f:
+                content = f.read()
+        except Exception:
+            continue
+        proxy_ports = re.findall(r"proxy_pass\s+https?://[^:/]+:(\d+)", content)
+        if not proxy_ports:
+            continue
+        port = proxy_ports[0]
+        keywords = {_norm(fname)}
+        for sn_line in re.findall(r"server_name\s+([^;]+);", content):
+            for token in sn_line.split():
+                token = token.strip().lstrip("www.")
+                if token and token != "_":
+                    keywords.add(_norm(token.split(".")[0]))
+        entries.append((keywords, port))
+    return entries
+
+def match_proxy_port(dirname, entries):
+    norm_dir = _norm(dirname)
+    if not norm_dir:
+        return None
+    for keywords, port in entries:
+        for kw in keywords:
+            if kw and (kw in norm_dir or norm_dir in kw):
+                return port
+    return None
+
 def get_sites():
     dirs = ["/var/www", "/home", "/srv/www", "/srv"]
     paths = []
@@ -303,13 +343,17 @@ def get_sites():
                 sizes[parts[1]] = parts[0]
 
     ports = get_nginx_site_ports()
+    proxy_entries = get_nginx_proxy_keywords()
 
     sites = []
     for full in paths:
+        port = ports.get(full)
+        if not port:
+            port = match_proxy_port(os.path.basename(full), proxy_entries)
         sites.append({
             "name": full,
             "size": sizes.get(full, "?"),
-            "port": ports.get(full, "-"),
+            "port": port or "-",
         })
     return sites
 
